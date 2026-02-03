@@ -1,0 +1,21 @@
+complaint_type,avg_minutes,n_requests
+Smoking,2321513.94,189
+Food Establishment,1737484.74,669
+New Tree Request,1502119.75,510
+Graffiti,1409214.31,2016
+Root/Sewer/Sidewalk Condition,530376.66,408
+Dead/Dying Tree,289856.88,180
+Consumer Complaint,245855.71,687
+Illegal Tree Damage,195724.13,102
+For Hire Vehicle Complaint,149657.27,402
+Special Projects Inspection Team (SPIT),144945.53,402
+Maintenance or Facility,138603.48,309
+Damaged Tree,135928.44,612
+Overgrown Tree/Branches,121488.11,291
+Taxi Complaint,110682.35,456
+Street Sign - Damaged,98065.05,456
+Building/Use,88999.07,1137
+Plumbing,69757.46,345
+Street Sign - Missing,62514.1,261
+FLOORING/STAIRS,47940.28,318
+APPLIANCE,47558.33,456
