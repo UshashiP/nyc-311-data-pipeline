@@ -20,5 +20,6 @@ class Config:
     @classmethod
     def ensure_directories(cls):
         """Create all necessary directories for the pipeline."""
-        for directory in [cls.DATA_DIR, cls.LOGS_DIR, cls.REPORTS_DIR, cls.CONFIG_DIR]:
+        for directory in [cls.DATA_DIR, cls.LOGS_DIR, 
+                          cls.REPORTS_DIR, cls.CONFIG_DIR]:
             directory.mkdir(parents=True, exist_ok=True)
