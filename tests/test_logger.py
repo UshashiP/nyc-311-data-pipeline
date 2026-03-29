@@ -2,9 +2,9 @@
 
 import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from src.utils.logger import get_logger
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 
 
 def test_get_logger_creates_logger():
