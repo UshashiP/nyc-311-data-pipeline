@@ -1,6 +1,6 @@
 """
-Analytics module for NYC 311 data pipeline.
-Runs analytical queries against the star schema and exports reports as CSVs.
+Analytics module for NYC 311 data pipeline
+Runs analytical queries against the star schema and exports reports as CSVs
 """
 import duckdb
 import pandas as pd

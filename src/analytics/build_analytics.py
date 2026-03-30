@@ -1,6 +1,6 @@
 """
-Analytics module for NYC 311 data pipeline.
-Builds a star schema (fact + dimension tables) from cleaned Parquet data.
+Analytics module for NYC 311 data pipeline
+Builds a star schema (fact + dimension tables) from cleaned Parquet data
 """
 import duckdb
 from pathlib import Path
