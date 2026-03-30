@@ -3,6 +3,7 @@ Transformation module for NYC 311 data pipeline.
 Provides functions to clean and preprocess raw 311 data.
 """
 import pandas as pd
+import numpy as np
 from typing import List, Optional
 
 def clean_311_data(
@@ -11,7 +12,7 @@ def clean_311_data(
     dropna_threshold: float = 0.5,
     drop_duplicates: bool = True,
 ) -> pd.DataFrame:
-    import numpy as np
+    
 
     if required_columns is not None:
         df = df[[col for col in required_columns if col in df.columns]]
