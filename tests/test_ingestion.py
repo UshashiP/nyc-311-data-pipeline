@@ -1,45 +1,74 @@
 # tests/test_ingestion.py
-# Unit tests for the ingestion module
-import pytest
-from pathlib import Path
-from src.ingestion.api_client import fetch_311_data, load_311_data_from_file
 import pandas as pd
+import pytest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+from src.ingestion.api_client import fetch_311_data, load_311_data_from_file
 
-def test_fetch_311_data_small(monkeypatch):
-    # Mock requests.get to avoid real API calls
-    import requests
-    class MockResponse:
-        def __init__(self, json_data):
-            self._json = json_data
-        def json(self):
-            return self._json
-        def raise_for_status(self):
-            pass
-    def mock_get(*args, **kwargs):
-        # Simulate two pages of 2 records each, then empty
-        offset = int(kwargs['params'].get('$offset', 0))
-        if offset == 0:
-            return MockResponse([
-                {"unique_key": "1", "complaint_type": "Noise"},
-                {"unique_key": "2", "complaint_type": "Heat"},
-            ])
-        elif offset == 2:
-            return MockResponse([
-                {"unique_key": "3", "complaint_type": "Water"},
-            ])
-        else:
-            return MockResponse([])
-    monkeypatch.setattr(requests, "get", mock_get)
-    df = fetch_311_data(total_limit=3, batch_size=2, verbose=False)
+
+def make_batch(n: int, start: int = 0) -> list[dict]:
+    return [{"unique_key": str(start + i), "complaint_type": "Noise"} for i in range(n)]
+
+
+def mock_response(data: list) -> MagicMock:
+    mock = MagicMock()
+    mock.json.return_value = data
+    mock.raise_for_status.return_value = None
+    return mock
+
+
+@patch("src.ingestion.api_client.requests.Session")
+def test_fetch_paginates_and_respects_limit(mock_session_cls):
+    """Should paginate and stop at total_limit."""
+    mock_session = MagicMock()
+    mock_session_cls.return_value = mock_session
+    mock_session.get.side_effect = [
+        mock_response(make_batch(5, start=0)),
+        mock_response(make_batch(5, start=5)),
+        mock_response([]),
+    ]
+    df = fetch_311_data(total_limit=7, batch_size=5, verbose=False)
     assert isinstance(df, pd.DataFrame)
-    assert len(df) == 3
-    assert set(df['complaint_type']) == {"Noise", "Heat", "Water"}
+    assert len(df) == 7
 
-def test_load_311_data_from_file(tmp_path):
-    # Create a small CSV file
-    csv_path = tmp_path / "test_311.csv"
-    df = pd.DataFrame({"unique_key": [1, 2], "complaint_type": ["Noise", "Heat"]})
-    df.to_csv(csv_path, index=False)
-    loaded = load_311_data_from_file(csv_path)
-    assert loaded.shape == (2, 2)
-    assert set(loaded['complaint_type']) == {"Noise", "Heat"}
+
+@patch("src.ingestion.api_client.requests.Session")
+def test_fetch_saves_file(mock_session_cls):
+    """Should save output to disk."""
+    mock_session = MagicMock()
+    mock_session_cls.return_value = mock_session
+    mock_session.get.return_value = mock_response(make_batch(3))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = Path(tmpdir) / "output.parquet"
+        fetch_311_data(total_limit=3, save_path=path, verbose=False)
+        assert path.exists()
+
+
+@patch("src.ingestion.api_client.requests.Session")
+def test_fetch_raises_on_http_error(mock_session_cls):
+    """Should propagate HTTP errors."""
+    import requests
+    mock_session = MagicMock()
+    mock_session_cls.return_value = mock_session
+    mock_obj = MagicMock()
+    mock_obj.raise_for_status.side_effect = requests.HTTPError("500")
+    mock_session.get.return_value = mock_obj
+    with pytest.raises(requests.HTTPError):
+        fetch_311_data(total_limit=5, verbose=False)
+
+
+def test_load_from_file():
+    """Should load Parquet and CSV files correctly."""
+    df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for ext, writer in [(".parquet", df.to_parquet), (".csv", df.to_csv)]:
+            path = Path(tmpdir) / f"data{ext}"
+            writer(path, index=False)
+            assert load_311_data_from_file(path).equals(df)
+
+
+def test_load_file_not_found():
+    """Should raise FileNotFoundError for missing files."""
+    with pytest.raises(FileNotFoundError):
+        load_311_data_from_file(Path("/nonexistent/data.parquet"))
