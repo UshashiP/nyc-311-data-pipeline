@@ -25,8 +25,11 @@ def valid_df():
         "complaint_type": ["Noise", "Graffiti", "HEAT/HOT WATER"],
         "agency":         ["NYPD", "DSNY", "HPD"],
         "borough":        ["MANHATTAN", "BROOKLYN", "BRONX"],
+        "descriptor":     ["Loud Music", "Wall", "No Heat"],
+        "incident_zip":   ["10001", "11201", "10451"],
+        "latitude":       [40.75, 40.69, 40.84],
+        "longitude":      [-73.99, -73.99, -73.93],
     })
-
 
 # ── validate_schema ────────────────────────────────────────────────────────
 

@@ -1,0 +1,35 @@
+# NYC 311 Data Pipeline Configuration
+
+api:
+  base_url: "https://data.cityofnewyork.us/resource/erm2-nwe9.json"
+  app_token: null    # set via SOCRATA_APP_TOKEN env variable
+  batch_size: 1000
+  total_limit: 50000
+  start_date: "2025-01-01"
+  end_date: "2025-03-30"
+
+paths:
+  raw_data: "data/raw/nyc_311"
+  clean_data: "data/clean/nyc_311"
+  analytics: "data/analytics/nyc_311"
+  logs: "logs"
+  reports: "reports"
+
+cleaning:
+  required_columns:
+    - unique_key
+    - complaint_type
+    - borough
+    - created_date
+    - closed_date
+    - agency
+    - descriptor
+    - incident_zip
+    - latitude
+    - longitude
+  drop_duplicates: true
+
+output:
+  duckdb_path: "data/db/nyc_311.duckdb"
+  parquet_path: "data/clean/nyc_311/nyc_311_clean.parquet"
+  table_name: "nyc_311_cleaned"

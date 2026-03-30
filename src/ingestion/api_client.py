@@ -20,7 +20,7 @@ def _create_session(app_token: Optional[str] = None) -> requests.Session:
     session = requests.Session()
     retry = Retry(
         total=3,
-        backoff_factor=2,           # waits 2s, 4s, 8s between retries
+        backoff_factor=2,
         status_forcelist=[429, 500, 502, 503, 504],
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -35,6 +35,8 @@ def fetch_311_data(
     app_token: Optional[str] = None,
     save_path: Optional[Path] = None,
     batch_size: int = 1000,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
@@ -45,6 +47,8 @@ def fetch_311_data(
         app_token: Optional Socrata app token for higher rate limits.
         save_path: Optional path to save raw data (CSV or Parquet based on extension).
         batch_size: Number of records per API request (max 1000).
+        start_date: Optional start date filter (e.g. "2025-01-01").
+        end_date: Optional end date filter (e.g. "2025-03-30").
         verbose: Print progress if True.
 
     Returns:
@@ -56,6 +60,14 @@ def fetch_311_data(
     """
     if not 1 <= batch_size <= 1000:
         raise ValueError(f"batch_size must be between 1 and 1000, got {batch_size}")
+
+    # Build optional date filter
+    where_clauses = []
+    if start_date:
+        where_clauses.append(f"created_date >= '{start_date}T00:00:00'")
+    if end_date:
+        where_clauses.append(f"created_date <= '{end_date}T23:59:59'")
+    where_clause = " AND ".join(where_clauses) if where_clauses else None
 
     session = _create_session(app_token)
     all_data = []
@@ -69,7 +81,10 @@ def fetch_311_data(
             if limit <= 0:
                 break
 
-        params = {"$limit": limit, "$offset": offset}
+        params = {"$limit": limit, "$offset": offset, "$order": "created_date DESC"}
+        if where_clause:
+            params["$where"] = where_clause
+
         response = session.get(NYC_311_API_URL, params=params, timeout=60)
         response.raise_for_status()
         batch = response.json()
@@ -85,10 +100,10 @@ def fetch_311_data(
             print(f"Fetched {min(fetched, total_limit or fetched)} records...")
 
         if total_limit is not None and fetched >= total_limit:
-            all_data = all_data[:total_limit]  # trim any overshoot
+            all_data = all_data[:total_limit]
             break
         if len(batch) < batch_size:
-            break  # no more data available
+            break
 
     df = pd.DataFrame(all_data)
 

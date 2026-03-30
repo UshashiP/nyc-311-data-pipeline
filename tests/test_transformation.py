@@ -22,10 +22,16 @@ def test_coordinate_normalization():
         "longitude": [-74.0, -74.1, -74.2, -72.5],
     })
     cleaned = clean_311_data(df)
-    assert cleaned["latitude"].iloc[0] == 40.5       # valid
-    assert np.isnan(cleaned["latitude"].iloc[1])     # 39.9 < 40, out of bounds
-    assert np.isnan(cleaned["latitude"].iloc[2])     # 41.1 > 41, out of bounds
-    assert np.isnan(cleaned["longitude"].iloc[3])    # -72.5 > -73, out of bounds
+    assert cleaned["latitude"].iloc[0] == 40.5       # valid, unchanged
+
+    # out of bounds coords are set to NaN then filled with median of valid values
+    valid_lats = pd.Series([40.5, 40.7])             # 39.9 and 41.1 are out of bounds
+    expected_median = valid_lats.median()            # 40.6
+    assert cleaned["latitude"].iloc[1] == expected_median
+    assert cleaned["latitude"].iloc[2] == expected_median
+
+    valid_lons = pd.Series([-74.0, -74.1, -74.2])   # -72.5 is out of bounds
+    assert cleaned["longitude"].iloc[3] == valid_lons.median()
 
 
 def test_borough_standardization():
@@ -49,32 +55,31 @@ def test_response_time_calculation():
 def test_general_cleaning():
     df = pd.DataFrame({
         "unique_key":     [1, 1, 2],
-        # Both duplicate rows have identical borough so they normalize to the same value
         "complaint_type": ["Noise", "Noise", None],
-        "borough":        ["BK", "BK", "MN"],        # ← both "BK", not None vs "BK"
+        "borough":        ["BK", "BK", "MN"],
         "extra_col":      [None, None, None],
     })
     cleaned = clean_311_data(
         df,
         required_columns=["unique_key", "complaint_type", "borough"],
-        dropna_threshold=0.5,
+        drop_duplicates=True,
     )
-    assert cleaned.shape[1] == 3          # extra_col dropped
-    assert cleaned.shape[0] == 2          # (1, Noise, BROOKLYN) deduped to 1 row + row 2
+    assert cleaned.shape[1] == 3
+    assert cleaned.shape[0] == 2
     assert all(cleaned["complaint_type"].notna())
     assert all(cleaned["borough"].notna())
 
 
-def test_dropna_threshold_drops_sparse_columns():
-    """Columns with >= 50% missing values should be dropped."""
+def test_entirely_empty_columns_dropped():
+    """Columns with 100% missing values should be dropped."""
     df = pd.DataFrame({
-        "unique_key":  [1, 2, 3, 4],
-        "sparse_col":  [None, None, None, "x"],   # 75% missing → dropped
-        "dense_col":   ["a", "b", None, "d"],      # 25% missing → kept
+        "unique_key":   ["1", "2", "3"],
+        "complaint_type": ["Noise", "Graffiti", "Heat"],
+        "empty_col":    [None, None, None],   # 100% null → dropped
     })
-    cleaned = clean_311_data(df, dropna_threshold=0.5)
-    assert "sparse_col" not in cleaned.columns
-    assert "dense_col" in cleaned.columns
+    cleaned = clean_311_data(df)
+    assert "empty_col" not in cleaned.columns
+    assert "complaint_type" in cleaned.columns
 
 
 def test_missing_complaint_type_filled():

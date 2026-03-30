@@ -10,9 +10,14 @@ from typing import List
 REQUIRED_COLUMNS = [
     "unique_key",
     "created_date",
+    "closed_date",
     "complaint_type",
     "agency",
     "borough",
+    "descriptor",
+    "incident_zip",  
+    "latitude",
+    "longitude",
 ]
 
 # Columns that must not exceed this null fraction

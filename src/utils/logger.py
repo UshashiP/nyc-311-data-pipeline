@@ -1,38 +1,42 @@
 import logging
-from .config import Config
+from pathlib import Path
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, log_dir: Path = Path("logs")) -> logging.Logger:
     """
     Returns a logger with the specified name.
-    Logs to both console and a file, with formatting and level from config.
+    Logs to both console and a file.
+
+    Args:
+        name: Logger name (typically __name__ of the calling module).
+        log_dir: Directory to write log file. Defaults to logs/.
+
+    Returns:
+        Configured logger instance.
     """
     logger = logging.getLogger(name)
     if logger.hasHandlers():
-        return logger  # Avoid adding handlers multiple times
+        return logger
 
-    log_level = logging.INFO
-    log_dir = Config.LOGS_DIR
+    log_dir = Path(log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "pipeline.log"
 
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Console handler
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
-    ch.setLevel(log_level)
-    logger.addHandler(ch)
+    ch.setLevel(logging.INFO)
 
-    # File handler
-    fh = logging.FileHandler(log_file)
+    fh = logging.FileHandler(log_dir / "pipeline.log")
     fh.setFormatter(formatter)
-    fh.setLevel(log_level)
-    logger.addHandler(fh)
+    fh.setLevel(logging.INFO)
 
-    logger.setLevel(log_level)
+    logger.addHandler(ch)
+    logger.addHandler(fh)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
+
     return logger
